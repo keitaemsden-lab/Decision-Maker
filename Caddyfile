@@ -1,0 +1,20 @@
+:80 {
+	root * /usr/share/caddy
+	encode gzip zstd
+	try_files {path} {path}/ /index.html
+	file_server
+	header {
+		Cache-Control "public, max-age=300"
+		-Server
+		# Security headers moved into git (2026-08-30). Byte-identical to the
+		# set hand-patched into the live container on 2026-08-19 (docker-exec
+		# edit, wiped on every redeploy — the familyfinance failure class).
+		# CSP kept verbatim: the app runs under this exact policy in
+		# production today.
+		Strict-Transport-Security "max-age=15768000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Content-Security-Policy "default-src 'self'"
+	}
+}
