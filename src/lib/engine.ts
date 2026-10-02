@@ -241,3 +241,52 @@ export function prosConsToModel(pros: WeightedItem[], cons: WeightedItem[]): Dec
     scores: { yes, no },
   }
 }
+
+// ─── Whole-step weight flips (the "what would flip it" list) ───────────────
+
+export const WEIGHT_MIN = 0
+export const WEIGHT_MAX = 5
+
+export interface StepFlip {
+  criterionId: string
+  from: number
+  to: number
+  /** Option that becomes the sole leader at that weight. */
+  newLeaderId: string
+  newTotal: number
+}
+
+/**
+ * For each criterion, the nearest whole-number weight (WEIGHT_MIN..WEIGHT_MAX,
+ * others fixed) that hands sole first place to a different option. This is
+ * what a person can actually set with the weight sliders, so it is the list the
+ * UI shows; `sensitivity` gives the exact tie points. Sorted by the size of the
+ * change, then by criterion order. Returns [] with no sole leader.
+ */
+export function weightFlips(model: DecisionModel, limit = Infinity): StepFlip[] {
+  const base = rankOptions(model)
+  if (model.options.length < 2 || base.isTie) return []
+  const leader = base.winners[0]
+  const out: (StepFlip & { order: number })[] = []
+  model.criteria.forEach((c, order) => {
+    const from = safeWeight(c.weight)
+    let best: StepFlip | null = null
+    for (let to = WEIGHT_MIN; to <= WEIGHT_MAX; to++) {
+      if (to === from) continue
+      const r = rankOptions({ ...model, criteria: model.criteria.map((x) => (x.id === c.id ? { ...x, weight: to } : x)) })
+      if (r.isTie || r.winners[0] === leader) continue
+      if (!best || Math.abs(to - from) < Math.abs(best.to - best.from)) {
+        best = { criterionId: c.id, from, to, newLeaderId: r.winners[0], newTotal: r.ranking[0].total }
+      }
+    }
+    if (best) out.push({ ...best, order })
+  })
+  out.sort((a, b) => Math.abs(a.to - a.from) - Math.abs(b.to - b.from) || a.order - b.order)
+  return out.slice(0, limit).map((f) => ({
+    criterionId: f.criterionId,
+    from: f.from,
+    to: f.to,
+    newLeaderId: f.newLeaderId,
+    newTotal: f.newTotal,
+  }))
+}

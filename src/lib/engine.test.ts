@@ -8,6 +8,7 @@ import {
   sensitivity,
   tallyProsCons,
   weightedTotal,
+  weightFlips,
   type DecisionModel,
 } from './engine'
 
@@ -231,5 +232,31 @@ describe('quick pros/cons mode', () => {
     const r2 = rankOptions(prosConsToModel(cons, pros))
     expect(r2.winners).toEqual(['no'])
     expect(rankOptions(prosConsToModel([{ text: 'a', weight: 2 }], [{ text: 'b', weight: 2 }])).isTie).toBe(true)
+  })
+})
+
+describe('weightFlips', () => {
+  it('finds the nearest whole weight per criterion that changes the leader', () => {
+    // a: 3*8 + 1*4 = 28/4 = 7; b: 3*5 + 1*10 = 25/4 = 6.25. a leads.
+    const flips = weightFlips(model())
+    expect(flips.map((f) => f.criterionId)).toEqual(['speed', 'price'])
+    const speed = flips[0]
+    // speed 2: a = 32/5 = 6.4, b = 35/5 = 7.0, so b leads
+    expect(speed).toMatchObject({ from: 1, to: 2, newLeaderId: 'b' })
+    expect(speed.newTotal).toBeCloseTo(7)
+    expect(flips[1]).toMatchObject({ from: 3, to: 1, newLeaderId: 'b' })
+  })
+  it('skips weights that only produce a tie', () => {
+    // a: price 6, speed 4; b: price 4, speed 6. weights 2,1 -> a leads; speed 2 ties; speed 3 flips.
+    const m = model({ criteria: [{ id: 'price', name: 'P', weight: 2 }, { id: 'speed', name: 'S', weight: 1 }], scores: { a: { price: 6, speed: 4 }, b: { price: 4, speed: 6 } } })
+    expect(weightFlips(m).find((f) => f.criterionId === 'speed')).toMatchObject({ to: 3 })
+  })
+  it('returns nothing when tied, single option, or unflippable', () => {
+    expect(weightFlips(model({ scores: { a: { price: 5, speed: 5 }, b: { price: 5, speed: 5 } } }))).toEqual([])
+    expect(weightFlips(model({ options: [{ id: 'a', name: 'A' }] }))).toEqual([])
+    expect(weightFlips(model({ scores: { a: { price: 9, speed: 9 }, b: { price: 1, speed: 1 } } }))).toEqual([])
+  })
+  it('respects the limit', () => {
+    expect(weightFlips(model(), 1)).toHaveLength(1)
   })
 })
