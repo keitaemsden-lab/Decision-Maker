@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { AppRoutes } from './App'
@@ -25,6 +25,8 @@ describe('validation messages', () => {
     await renderAt('/new')
     await user.click(screen.getByRole('button', { name: 'Save decision' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Give the decision a title.')
+    // The alert takes focus on the next frame; wait for it as a person would, or typing races it.
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveFocus())
     await user.type(screen.getByRole('textbox', { name: 'Decision title' }), 'Which car?')
     expect(screen.getByRole('alert')).not.toHaveTextContent('Give the decision a title.')
     expect(screen.getByRole('alert')).toHaveTextContent('Name every option')
@@ -40,6 +42,7 @@ describe('create a matrix decision', () => {
     expect(alert).toHaveTextContent('Give the decision a title.')
     expect(alert).toHaveTextContent('Name every option')
     expect(loadDecisions()).toHaveLength(0)
+    await waitFor(() => expect(alert).toHaveFocus())
 
     await user.type(screen.getByRole('textbox', { name: 'Decision title' }), 'Which car?')
     await user.type(screen.getByRole('textbox', { name: 'Option 1 name' }), 'Corolla')
