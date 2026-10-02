@@ -280,6 +280,8 @@ export default function NewDecision() {
   }
 
   const filled = (xs: ProsConsItem[]) => xs.filter((x) => x.text.trim())
+  // Only keep a submitted error on screen while it is still true, so fixing a field clears its message.
+  const liveErrors = errors.length ? errors.filter((x) => validate().includes(x)) : errors
 
   return (
     <main id="main">
@@ -383,9 +385,9 @@ export default function NewDecision() {
         )}
 
         <div className="savebar">
-          {errors.length > 0 && (
+          {liveErrors.length > 0 && (
             <div className="errors" role="alert" tabIndex={-1} ref={errRef}>
-              {errors.map((x) => (
+              {liveErrors.map((x) => (
                 <p key={x}>{x}</p>
               ))}
             </div>

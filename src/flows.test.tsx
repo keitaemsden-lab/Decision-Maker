@@ -19,6 +19,18 @@ async function renderAt(path: string) {
 
 const lede = () => document.querySelector('.lede') as HTMLElement
 
+describe('validation messages', () => {
+  it('drops a message once the field it named is fixed', async () => {
+    const user = userEvent.setup()
+    await renderAt('/new')
+    await user.click(screen.getByRole('button', { name: 'Save decision' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Give the decision a title.')
+    await user.type(screen.getByRole('textbox', { name: 'Decision title' }), 'Which car?')
+    expect(screen.getByRole('alert')).not.toHaveTextContent('Give the decision a title.')
+    expect(screen.getByRole('alert')).toHaveTextContent('Name every option')
+  })
+})
+
 describe('create a matrix decision', () => {
   it('refuses to save blanks, then saves a named matrix and opens it', async () => {
     const user = userEvent.setup()
