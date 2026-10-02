@@ -22,3 +22,16 @@ export function exampleMatrix(): { title: string; options: Option[]; criteria: C
   })
   return { title: 'Which offer do I take?', options, criteria, scores }
 }
+
+export function exampleQuick() {
+  const item = (id: string, text: string, weight: number) => ({ id, text, weight })
+  return {
+    title: 'Buy the e-bike for the commute?',
+    pros: [
+      item('p1', 'Saves about $40 a week on fuel and parking', 3),
+      item('p2', 'Exercise without finding gym time', 2),
+      item('p3', 'Beats the bus in peak traffic', 2),
+    ],
+    cons: [item('c1', '$3,200 up front', 3), item('c2', 'Wet season rides', 1), item('c3', 'No secure bike parking at work yet', 2)],
+  }
+}

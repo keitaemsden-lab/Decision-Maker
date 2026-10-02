@@ -235,12 +235,25 @@ describe('home', () => {
     expect(links[1]).toHaveTextContent('Lean yes, 3 to 0.')
   })
 
-  it('opens a worked example from the empty state', async () => {
+  it('opens a playable worked example that saves nothing until kept', async () => {
     const user = userEvent.setup()
     await renderAt('/')
     expect(screen.getByText('Nothing weighed yet.')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Open a worked example' }))
+    await user.click(screen.getByRole('link', { name: 'Open a worked example' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'Which offer do I take?' })).toBeInTheDocument()
-    expect(loadDecisions()).toHaveLength(1)
+    fireEvent.change(screen.getByRole('slider', { name: 'Growth' }), { target: { value: '0' } })
+    expect(loadDecisions()).toHaveLength(0)
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Keep a copy' }))
+    expect(await screen.findByRole('link', { name: 'Edit' })).toBeInTheDocument()
+    const [kept] = loadDecisions()
+    if (kept.mode !== 'matrix') throw new Error('expected matrix')
+    expect(kept.criteria.find((c) => c.name === 'Growth')!.weight).toBe(0)
+  })
+
+  it('has a quick call example too', async () => {
+    await renderAt('/example/quick')
+    expect(screen.getByRole('heading', { level: 1, name: 'Buy the e-bike for the commute?' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'For 7, against 6' })).toBeInTheDocument()
   })
 })

@@ -31,6 +31,8 @@ export function AppRoutes() {
         <Route path="/new" element={<NewDecision key="new" />} />
         <Route path="/decision/:id" element={<DecisionDetail />} />
         <Route path="/decision/:id/edit" element={<NewDecision key="edit" />} />
+        <Route path="/example" element={<DecisionDetail example="matrix" key="ex-m" />} />
+        <Route path="/example/quick" element={<DecisionDetail example="quick" key="ex-q" />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>

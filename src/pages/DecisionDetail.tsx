@@ -6,7 +6,16 @@ import { useDocumentTitle } from '../components/useDocumentTitle'
 import type { DecisionModel } from '../lib/engine'
 import { fileSlug, matrixCsv, matrixShareText, matrixVerdict, quickShareText, quickVerdict } from '../lib/verdict'
 import { formatDate } from '../utils/format'
-import { deleteDecision, getDecisionById, updateDecision, type Decision, type MatrixDecision } from '../utils/storage'
+import {
+  deleteDecision,
+  getDecisionById,
+  saveDecision,
+  saveMatrixDecision,
+  updateDecision,
+  type Decision,
+  type MatrixDecision,
+} from '../utils/storage'
+import { exampleMatrix, exampleQuick } from '../lib/example'
 
 function download(name: string, text: string, type: string) {
   const url = URL.createObjectURL(new Blob([text], { type }))
@@ -21,7 +30,15 @@ function download(name: string, text: string, type: string) {
 
 const modelOf = (d: MatrixDecision): DecisionModel => ({ options: d.options, criteria: d.criteria, scores: d.scores })
 
-function MatrixBoard({ decision }: { decision: MatrixDecision }) {
+function MatrixBoard({
+  decision,
+  persist,
+  onModel,
+}: {
+  decision: MatrixDecision
+  persist: boolean
+  onModel?: (m: DecisionModel) => void
+}) {
   const [opened] = useState(() => modelOf(decision))
   const [model, setModel] = useState(opened)
   const dirty = model !== opened
@@ -29,14 +46,15 @@ function MatrixBoard({ decision }: { decision: MatrixDecision }) {
 
   // Weights and scores save as you go (debounced so a drag is one write, not fifty).
   useEffect(() => {
-    if (model === opened) return
+    onModel?.(model)
+    if (model === opened || !persist) return
     pending.current = model
     const t = setTimeout(() => {
       updateDecision(decision.id, model)
       pending.current = null
     }, 250)
     return () => clearTimeout(t)
-  }, [model, opened, decision.id])
+  }, [model, opened, decision.id, persist, onModel])
   useEffect(
     () => () => {
       if (pending.current) updateDecision(decision.id, pending.current)
@@ -59,12 +77,22 @@ function MatrixBoard({ decision }: { decision: MatrixDecision }) {
   )
 }
 
-export default function DecisionDetail() {
-  const { id } = useParams()
+const EXAMPLE_DATE = '2026-09-28T09:00:00.000Z'
+function exampleDecision(kind: 'matrix' | 'quick'): Decision {
+  if (kind === 'matrix') return { id: 'example', mode: 'matrix', createdAt: EXAMPLE_DATE, ...exampleMatrix() }
+  return { id: 'example-quick', mode: 'proscons', createdAt: EXAMPLE_DATE, recommendation: 'lean yes', ...exampleQuick() }
+}
+
+/** `example` renders a worked example in memory: playable, never saved unless the person keeps a copy. */
+export default function DecisionDetail({ example }: { example?: 'matrix' | 'quick' }) {
+  const params = useParams()
+  const id = example ? `example:${example}` : params.id
   const navigate = useNavigate()
   // Read synchronously so there is no loading flash; re-read when the id changes.
-  const [state, setState] = useState<{ id?: string; d: Decision | undefined }>(() => ({ id, d: id ? getDecisionById(id) : undefined }))
-  if (state.id !== id) setState({ id, d: id ? getDecisionById(id) : undefined })
+  const read = (key?: string) => (example ? exampleDecision(example) : key ? getDecisionById(key) : undefined)
+  const [state, setState] = useState<{ id?: string; d: Decision | undefined }>(() => ({ id, d: read(params.id) }))
+  if (state.id !== id) setState({ id, d: read(params.id) })
+  const exampleModel = useRef<DecisionModel | null>(null)
   const decision = state.d
   const [status, setStatus] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -98,7 +126,18 @@ export default function DecisionDetail() {
   }
 
   // Always share the latest saved state (the board autosaves).
-  const latest = () => getDecisionById(decision.id) ?? decision
+  const latest = (): Decision => {
+    if (example) return decision.mode === 'matrix' && exampleModel.current ? { ...decision, ...exampleModel.current } : decision
+    return getDecisionById(decision.id) ?? decision
+  }
+  const keepCopy = () => {
+    const d = latest()
+    const saved =
+      d.mode === 'matrix'
+        ? saveMatrixDecision({ title: d.title, options: d.options, criteria: d.criteria, scores: d.scores })
+        : saveDecision({ title: d.title, pros: d.pros, cons: d.cons })
+    navigate(`/decision/${saved.id}`)
+  }
   const shareText = () => {
     const d = latest()
     return d.mode === 'matrix' ? matrixShareText(d.title, modelOf(d)) : quickShareText(d.title, d.pros, d.cons)
@@ -133,14 +172,19 @@ export default function DecisionDetail() {
         <p className="crumb">
           <Link to="/">All decisions</Link>
           <span className="mono">
-            {decision.mode === 'matrix' ? 'Matrix' : 'Quick call'}, {formatDate(decision.createdAt)}
+            {example ? 'Worked example, nothing is saved' : `${decision.mode === 'matrix' ? 'Matrix' : 'Quick call'}, ${formatDate(decision.createdAt)}`}
           </span>
         </p>
         <h1 className="break-words">{decision.title}</h1>
       </div>
 
       {decision.mode === 'matrix' ? (
-        <MatrixBoard key={decision.id} decision={decision} />
+        <MatrixBoard
+          key={decision.id}
+          decision={decision}
+          persist={!example}
+          onModel={example ? (m) => (exampleModel.current = m) : undefined}
+        />
       ) : (
         <>
           <div className="verdict-block">
@@ -174,18 +218,30 @@ export default function DecisionDetail() {
           Share and manage
         </h2>
         <div className="actions">
-          <Link className="btn primary" to={`/decision/${decision.id}/edit`}>
-            Edit
-          </Link>
+          {example ? (
+            <button type="button" className="btn primary" onClick={keepCopy}>
+              Keep a copy
+            </button>
+          ) : (
+            <Link className="btn primary" to={`/decision/${decision.id}/edit`}>
+              Edit
+            </Link>
+          )}
           <button type="button" className="btn" onClick={onCopy}>
             Copy summary
           </button>
           <button type="button" className="btn" onClick={onExport}>
             {decision.mode === 'matrix' ? 'Export CSV' : 'Export text'}
           </button>
-          <button type="button" className={`btn danger${confirmDelete ? ' armed' : ''}`} onClick={onDelete}>
-            {confirmDelete ? 'Confirm delete' : 'Delete'}
-          </button>
+          {example ? (
+            <Link className="btn" to={example === 'matrix' ? '/example/quick' : '/example'}>
+              {example === 'matrix' ? 'See a quick call example' : 'See a matrix example'}
+            </Link>
+          ) : (
+            <button type="button" className={`btn danger${confirmDelete ? ' armed' : ''}`} onClick={onDelete}>
+              {confirmDelete ? 'Confirm delete' : 'Delete'}
+            </button>
+          )}
           {confirmDelete && (
             <button type="button" className="btn" onClick={() => setConfirmDelete(false)}>
               Keep it

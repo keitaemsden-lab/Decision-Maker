@@ -1,10 +1,9 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { loadDecisions, saveMatrixDecision, type Decision } from '../utils/storage'
+import { Link } from 'react-router-dom'
+import { loadDecisions, type Decision } from '../utils/storage'
 import { formatDate } from '../utils/format'
 import { getScore, rankOptions, tallyProsCons } from '../lib/engine'
 import { effectiveWeights, f2, optionLabel, quickVerdict, sentenceText } from '../lib/verdict'
-import { exampleMatrix } from '../lib/example'
 import { useDocumentTitle } from '../components/useDocumentTitle'
 
 function readout(d: Decision): { verdict: string; score: string } {
@@ -45,13 +44,7 @@ function Strip({ d }: { d: Decision }) {
 
 export default function Home() {
   const [decisions] = useState<Decision[]>(() => [...loadDecisions()].reverse())
-  const navigate = useNavigate()
   useDocumentTitle(null)
-
-  const openExample = () => {
-    const d = saveMatrixDecision(exampleMatrix())
-    navigate(`/decision/${d.id}`)
-  }
 
   return (
     <main id="main">
@@ -62,9 +55,9 @@ export default function Home() {
           <Link className="btn primary" to="/new">
             New decision
           </Link>
-          <button type="button" className="btn" onClick={openExample}>
+          <Link className="btn" to="/example">
             Open a worked example
-          </button>
+          </Link>
         </div>
       </div>
 
