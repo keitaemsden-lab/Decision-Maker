@@ -3,13 +3,14 @@ import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
 import Home from './pages/Home'
 import NewDecision from './pages/NewDecision'
 import DecisionDetail from './pages/DecisionDetail'
+import NotFound from './pages/NotFound'
 
 function NavBar() {
   return (
-    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur border-b border-gray-200">
+    <nav aria-label="Main" className="sticky top-0 z-50 bg-white/80 backdrop-blur border-b border-gray-200">
       <div className="max-w-lg mx-auto flex items-center justify-between px-4 py-3">
         <Link to="/" className="text-lg font-bold text-gray-900 hover:text-indigo-600 transition-colors">
-          Decision Maker
+          Big Decisions
         </Link>
         <Link
           to="/new"
@@ -30,6 +31,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/new" element={<NewDecision />} />
         <Route path="/decision/:id" element={<DecisionDetail />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   )

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { loadDecisions } from '../utils/storage';
+import { formatDate } from '../utils/format';
+import { rankOptions } from '../lib/engine';
 
 const BADGE = {
   'lean yes':          { label: 'Lean Yes',  cls: 'bg-green-100  text-green-700'  },
@@ -8,10 +10,13 @@ const BADGE = {
   'too close to call': { label: 'Too Close', cls: 'bg-yellow-100 text-yellow-700' },
 };
 
-function formatDate(iso) {
-  return new Date(iso).toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric',
-  });
+function badgeFor(d) {
+  if (d.mode === 'matrix') {
+    const r = rankOptions(d);
+    const top = d.options.find((o) => o.id === r.winners[0]);
+    return { label: r.isTie ? 'Tie' : (top?.name || 'Ranked'), cls: 'bg-gray-100 text-gray-600' };
+  }
+  return BADGE[d.recommendation] ?? { label: d.recommendation, cls: 'bg-gray-100 text-gray-600' };
 }
 
 export default function Home() {
@@ -25,18 +30,18 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50 px-4 py-10">
       <div className="max-w-lg mx-auto">
 
-        {/* Subtitle */}
+        <h1 className="text-2xl font-bold text-gray-900 mb-1">Big Decisions</h1>
         <p className="text-gray-500 mb-6">Stop overthinking. Start deciding.</p>
 
         {/* Past decisions */}
         {decisions.length === 0 ? (
           <p className="text-center text-gray-400 mt-20 text-sm">
-            No decisions yet — make your first one!
+            No decisions yet. Make your first one!
           </p>
         ) : (
           <ul className="space-y-3">
             {decisions.map((d) => {
-              const badge = BADGE[d.recommendation] ?? { label: d.recommendation, cls: 'bg-gray-100 text-gray-600' };
+              const badge = badgeFor(d);
               return (
                 <li
                   key={d.id}
@@ -44,7 +49,7 @@ export default function Home() {
                 >
                   {/* Title + date */}
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate">{d.title}</p>
+                    <p className="font-medium text-gray-900 truncate" title={d.title}>{d.title}</p>
                     <p className="text-xs text-gray-400 mt-0.5">{formatDate(d.createdAt)}</p>
                   </div>
 
@@ -58,7 +63,7 @@ export default function Home() {
                     to={`/decision/${d.id}`}
                     className="shrink-0 text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
                   >
-                    View →
+                    View<span className="sr-only">: {d.title}</span> →
                   </Link>
                 </li>
               );

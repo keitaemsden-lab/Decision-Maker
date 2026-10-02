@@ -9,6 +9,7 @@ const WEIGHT_LABELS = [
 ];
 
 const MAX_ITEMS = 8;
+const MAX_TEXT = 200;
 
 function ProgressBar({ step }) {
   return (
@@ -28,14 +29,15 @@ function ProgressBar({ step }) {
   );
 }
 
-function WeightButtons({ value, onChange }) {
+function WeightButtons({ value, onChange, groupLabel }) {
   return (
-    <div className="flex gap-1 mt-1">
+    <div className="flex gap-1 mt-1" role="group" aria-label={groupLabel}>
       {WEIGHT_LABELS.map(({ label, value: wv }) => (
         <button
           key={wv}
           type="button"
           onClick={() => onChange(wv)}
+          aria-pressed={value === wv}
           className={`text-xs font-medium px-2.5 py-1 rounded-lg transition-colors ${
             value === wv
               ? 'bg-indigo-600 text-white'
@@ -82,11 +84,14 @@ function ItemList({ items, setItems, placeholder, type }) {
               value={item.text}
               onChange={(e) => updateText(index, e.target.value)}
               placeholder={placeholder}
+              aria-label={`${type} ${index + 1}`}
+              maxLength={MAX_TEXT}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
             />
             <WeightButtons
               value={item.weight}
               onChange={(w) => updateWeight(index, w)}
+              groupLabel={`Weight for ${type} ${index + 1}`}
             />
           </div>
           {items.length > 1 && (
@@ -94,7 +99,7 @@ function ItemList({ items, setItems, placeholder, type }) {
               type="button"
               onClick={() => removeItem(index)}
               className="mt-1.5 text-gray-400 hover:text-gray-600 text-lg leading-none px-1"
-              aria-label="Remove"
+              aria-label={`Remove ${type} ${index + 1}`}
             >
               &times;
             </button>
@@ -140,7 +145,7 @@ export default function NewDecision() {
   }
 
   function handleSave() {
-    saveDecision({ title, pros: filteredPros, cons: filteredCons });
+    saveDecision({ title: title.trim(), pros: filteredPros, cons: filteredCons });
     navigate('/');
   }
 
@@ -161,6 +166,7 @@ export default function NewDecision() {
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-10">
       <div className="max-w-lg mx-auto">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">New decision</h1>
         <ProgressBar step={step} />
 
         {step === 1 && (
@@ -173,6 +179,8 @@ export default function NewDecision() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Should I quit my job?"
+              aria-label="Decision title"
+              maxLength={MAX_TEXT}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400"
               autoFocus
             />
@@ -254,7 +262,7 @@ export default function NewDecision() {
         {step === 4 && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <h2 className="text-lg font-semibold text-gray-800 mb-1">Review</h2>
-            <p className="text-gray-500 text-sm mb-5">"{title}"</p>
+            <p className="text-gray-500 text-sm mb-5 break-words [overflow-wrap:anywhere]">"{title}"</p>
 
             <div className="flex gap-4 mb-5">
               <div className="flex-1 bg-green-50 border border-green-100 rounded-xl p-4 text-center">

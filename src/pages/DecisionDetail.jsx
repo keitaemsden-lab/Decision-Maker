@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getDecisionById, deleteDecision } from '../utils/storage';
+import { formatDate } from '../utils/format';
 
 const BADGE = {
   'lean yes':          { label: 'Lean Yes',          cls: 'bg-green-100 text-green-700' },
@@ -9,12 +10,6 @@ const BADGE = {
 };
 
 const DOTS = { 1: '\u25CF', 2: '\u25CF\u25CF', 3: '\u25CF\u25CF\u25CF' };
-
-function formatDate(iso) {
-  return new Date(iso).toLocaleDateString('en-US', {
-    month: 'short', day: 'numeric', year: 'numeric',
-  });
-}
 
 function buildShareText(decision) {
   const prosScore = decision.pros.reduce((s, p) => s + p.weight, 0);
@@ -48,9 +43,13 @@ export default function DecisionDetail() {
 
   useEffect(() => {
     const d = getDecisionById(id);
+    setCopied(false);
+    setConfirmDelete(false);
     if (d) {
       setDecision(d);
+      setNotFound(false);
     } else {
+      setDecision(null);
       setNotFound(true);
     }
   }, [id]);
@@ -60,7 +59,7 @@ export default function DecisionDetail() {
     return (
       <div className="min-h-screen bg-gray-50 px-4 py-10">
         <div className="max-w-lg mx-auto text-center">
-          <p className="text-gray-500 mt-20">Decision not found.</p>
+          <h1 className="text-xl font-bold text-gray-900 mt-20">Decision not found</h1>
           <Link
             to="/"
             className="mt-4 inline-block text-indigo-600 font-medium hover:underline"
@@ -77,7 +76,19 @@ export default function DecisionDetail() {
     return (
       <div className="min-h-screen bg-gray-50 px-4 py-10">
         <div className="max-w-lg mx-auto text-center">
-          <p className="text-gray-400 mt-20 text-sm">Loading...</p>
+          <p className="text-gray-400 mt-20 text-sm" role="status">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (decision.mode === 'matrix') {
+    return (
+      <div className="min-h-screen bg-gray-50 px-4 py-10">
+        <div className="max-w-lg mx-auto text-center">
+          <h1 className="text-xl font-bold text-gray-900 mt-20 break-words">{decision.title}</h1>
+          <p className="text-gray-500 mt-2">This decision uses the options and criteria view, which is not available yet.</p>
+          <Link to="/" className="mt-4 inline-block text-indigo-600 font-medium hover:underline">Back to Home</Link>
         </div>
       </div>
     );
@@ -128,7 +139,7 @@ export default function DecisionDetail() {
           {/* Header: title + badge + date */}
           <div className="mb-6">
             <div className="flex items-start justify-between gap-3">
-              <h1 className="text-xl font-bold text-gray-900 leading-snug">
+              <h1 className="text-xl font-bold text-gray-900 leading-snug min-w-0 break-words [overflow-wrap:anywhere]">
                 {decision.title}
               </h1>
               <span
@@ -171,7 +182,7 @@ export default function DecisionDetail() {
                     key={p.id ?? p.text}
                     className="bg-green-50 rounded-lg px-3 py-2"
                   >
-                    <p className="text-sm text-gray-800">{p.text}</p>
+                    <p className="text-sm text-gray-800 break-words [overflow-wrap:anywhere]">{p.text}</p>
                     <p className="text-green-500 text-xs mt-0.5 tracking-widest">
                       {DOTS[p.weight]}
                     </p>
@@ -191,7 +202,7 @@ export default function DecisionDetail() {
                     key={c.id ?? c.text}
                     className="bg-red-50 rounded-lg px-3 py-2"
                   >
-                    <p className="text-sm text-gray-800">{c.text}</p>
+                    <p className="text-sm text-gray-800 break-words [overflow-wrap:anywhere]">{c.text}</p>
                     <p className="text-red-400 text-xs mt-0.5 tracking-widest">
                       {DOTS[c.weight]}
                     </p>
@@ -209,6 +220,7 @@ export default function DecisionDetail() {
               className="flex-1 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold py-2.5 px-4 rounded-xl transition-colors text-sm"
             >
               {copied ? 'Copied!' : 'Share'}
+              <span role="status" className="sr-only">{copied ? 'Copied to clipboard' : ''}</span>
             </button>
             <button
               type="button"
