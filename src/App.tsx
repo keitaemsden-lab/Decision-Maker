@@ -1,36 +1,52 @@
-import './App.css'
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
 import Home from './pages/Home'
-import NewDecision from './pages/NewDecision'
-import DecisionDetail from './pages/DecisionDetail'
+import NotFound from './pages/NotFound'
 
-function NavBar() {
+// The board (editor and detail) loads on demand so the home list stays light.
+const NewDecision = lazy(() => import('./pages/NewDecision'))
+const DecisionDetail = lazy(() => import('./pages/DecisionDetail'))
+
+export function Bar() {
   return (
-    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur border-b border-gray-200">
-      <div className="max-w-lg mx-auto flex items-center justify-between px-4 py-3">
-        <Link to="/" className="text-lg font-bold text-gray-900 hover:text-indigo-600 transition-colors">
-          Decision Maker
+    <header className="bar">
+      <Link to="/" className="mark">
+        <span className="mark-sq" aria-hidden="true" />
+        Big Decisions
+      </Link>
+      <nav aria-label="Main">
+        <Link to="/new" className="btn primary small">
+          New decision
         </Link>
-        <Link
-          to="/new"
-          className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-colors"
-        >
-          <span className="leading-none">+</span> New Decision
-        </Link>
-      </div>
-    </nav>
+      </nav>
+    </header>
+  )
+}
+
+export function AppRoutes() {
+  return (
+    <Suspense fallback={<main id="main" className="loading" aria-busy="true" />}>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/new" element={<NewDecision key="new" />} />
+        <Route path="/decision/:id" element={<DecisionDetail />} />
+        <Route path="/decision/:id/edit" element={<NewDecision key="edit" />} />
+        <Route path="/example" element={<DecisionDetail example="matrix" key="ex-m" />} />
+        <Route path="/example/quick" element={<DecisionDetail example="quick" key="ex-q" />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Suspense>
   )
 }
 
 function App() {
   return (
     <BrowserRouter>
-      <NavBar />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/new" element={<NewDecision />} />
-        <Route path="/decision/:id" element={<DecisionDetail />} />
-      </Routes>
+      <a className="skip" href="#main">
+        Skip to content
+      </a>
+      <Bar />
+      <AppRoutes />
     </BrowserRouter>
   )
 }
